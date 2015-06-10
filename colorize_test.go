@@ -1,20 +1,15 @@
 package colorize
 
-import (
-	"log"
-	"testing"
-)
+import "testing"
 
 func Test_Format(t *testing.T) {
-	msg := new(Message)
-	msg.Message = "Hello"
+	msg := NewMessage()
 	msg.Font = RED
-
-	log.Println(msg.format())
+	msg.WriteString("hello\n")
 }
 
 func Test_AddSetting(t *testing.T) {
-	ss := new(Message)
-	ss.AddSetting(color_tp(1))
-	log.Println(ss.Settings)
+	ss := NewMessage()
+	ss.AddAttr(Blod)
+	ss.WriteString("hello world\n")
 }

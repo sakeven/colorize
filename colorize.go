@@ -1,6 +1,12 @@
 package colorize
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+)
 
 /*
 \033[0m 关闭所有属性
@@ -24,10 +30,11 @@ import "fmt"
 \033[?25h 显示光标
 */
 
-type color_tp int
+type console_t int
+type color_t int
 
 const (
-	BLACK color_tp = iota
+	BLACK color_t = iota
 	RED
 	GREEN
 	YELLOW
@@ -35,46 +42,98 @@ const (
 	MAGENTA
 	CYAN
 	WHITE
+	DEFAULT    color_t = 9
+	FONT       color_t = 30
+	BACKGROUND color_t = 40
 )
 
 const (
-	Dim        color_tp = 2
-	Underlined color_tp = 4
-	Blinking   color_tp = 5
-	Reverse    color_tp = 7
-	Hidden     color_tp = 8
+	Blod       console_t = 1
+	Dim        console_t = 2
+	Underlined console_t = 4
+	Blinking   console_t = 5
+	Reverse    console_t = 7
+	Hidden     console_t = 8
 )
 
 const prefix = "\033["
-const reset color_tp = 20
-const clear = 0
-const FONT color_tp = 30
-const BACKGROUND color_tp = 40
+const reset console_t = 20
+const clear console_t = 0
 
-func (c *color_tp) format(_type color_tp) string {
-	gap := 30
-	switch _type {
-	case FONT:
-		gap = 30
-	case BACKGROUND:
-		gap = 40
-	default:
-		panic("type error")
+type Writer struct {
+	Attrs      []console_t
+	RestAttrs  []console_t
+	Font       color_t
+	Background color_t
+	AutoClear  bool
+	Escape     bool
+	Writer     io.Writer
+}
+
+func NewWriter(w interface{}) *Writer {
+	wr := &Writer{
+		Font:       DEFAULT,
+		Background: DEFAULT,
+		Writer:     os.Stdout,
 	}
-	return fmt.Sprintf("%d", color_tp(gap)+*c)
+	return wr
 }
 
-type Message struct {
-	Settings   []color_tp
-	Font       color_tp
-	Background color_tp
-	Message    string
+func (w *Writer) AddAttr(s console_t) {
+	w.Attrs = append(w.Attrs, s)
 }
 
-func (m *Message) AddSetting(s color_tp) {
-	m.Settings = append(m.Settings, s)
+func (w *Writer) formatFont() string {
+	return fmt.Sprintf("%d", FONT+w.Font)
 }
 
-func (m *Message) format() string {
-	return prefix + m.Font.format(FONT) + "m" + m.Message + prefix + fmt.Sprintf("%d", clear) + "m"
+func (w *Writer) formatBackground() string {
+	return fmt.Sprintf("%d", BACKGROUND+w.Background)
+}
+
+func (w *Writer) formatAttrs() string {
+	format := ""
+	for _, attr := range w.Attrs {
+		format += fmt.Sprintf("%d,", attr)
+	}
+
+	return strings.TrimRight(format, ",")
+}
+
+func (w *Writer) left() string {
+	left := prefix + w.formatFont() + ";" + w.formatBackground() + ";" + w.formatAttrs()
+	left = strings.TrimRight(left, ";") + "m"
+	return left
+}
+
+func (w *Writer) right() string {
+	return prefix + fmt.Sprintf("%d", clear) + "m"
+}
+
+func (w *Writer) WriteString(msg string) (int, error) {
+	return w.Write([]byte(msg))
+}
+
+func (w *Writer) Write(msg []byte) (int, error) {
+	if w.Escape {
+		return w.Writer.Write(msg)
+	}
+
+	buf := w.left()
+	_, err := w.Writer.Write([]byte(buf))
+	if err != nil {
+		return 0, errors.New("format error")
+	}
+
+	n, err := w.Writer.Write(msg)
+	if err != nil {
+		return n, err
+	}
+
+	buf = w.right()
+	_, err = w.Writer.Write([]byte(buf))
+	if err != nil {
+		return n, errors.New("format error")
+	}
+	return n, nil
 }
