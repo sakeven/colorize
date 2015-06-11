@@ -7,9 +7,14 @@ import (
 )
 
 func writeToStdout() {
-	msg := colorize.NewMessage()
-	msg.Font = colorize.RED
+	msg := colorize.NewWriter(nil)
+	msg.WriteString("[")
+	msg.Fore = colorize.RED
+	msg.AddAttr(colorize.Blod)
 	msg.WriteString("hello world")
+	msg.ClearAttrs()
+	msg.Fore = colorize.DEFAULT
+	msg.WriteString("]\n")
 }
 
 func writeToFile() {
@@ -19,14 +24,13 @@ func writeToFile() {
 	}
 	defer file.Close()
 
-	msg := colorize.DefaultWriter()
-	msg.Writer = file
-	msg.Font = colorize.GREEN
-	msg.Background = colorize.WHITE
+	msg := colorize.NewWriter(file)
+	msg.Fore = colorize.GREEN
+	msg.Back = colorize.WHITE
 	msg.AddAttr(colorize.Blinking)
 	msg.WriteString("hello")
 	msg.Escape = true
-	msg.WriteString("escaped")
+	msg.WriteString(" escaped\n")
 }
 
 func main() {

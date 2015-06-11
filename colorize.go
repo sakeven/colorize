@@ -42,9 +42,9 @@ const (
 	MAGENTA
 	CYAN
 	WHITE
-	DEFAULT    color_t = 9
-	FONT       color_t = 30
-	BACKGROUND color_t = 40
+	DEFAULT color_t = 9
+	FORE    color_t = 30
+	BACK    color_t = 40
 )
 
 const (
@@ -62,19 +62,27 @@ const clear console_t = 0
 
 type Writer struct {
 	Attrs      []console_t
-	RestAttrs  []console_t
-	Font       color_t
-	Background color_t
+	ResetAttrs []console_t
+	Fore       color_t
+	Back       color_t
 	AutoClear  bool
 	Escape     bool
+	IsHtml     bool
 	Writer     io.Writer
 }
 
 func NewWriter(w interface{}) *Writer {
 	wr := &Writer{
-		Font:       DEFAULT,
-		Background: DEFAULT,
-		Writer:     os.Stdout,
+		Fore:   DEFAULT,
+		Back:   DEFAULT,
+		Writer: os.Stdout,
+	}
+	if w, ok := w.(io.Writer); ok {
+		wr.Writer = w
+	}
+
+	if _, ok := w.(*os.File); ok {
+		wr.Escape = true
 	}
 	return wr
 }
@@ -83,12 +91,21 @@ func (w *Writer) AddAttr(s console_t) {
 	w.Attrs = append(w.Attrs, s)
 }
 
-func (w *Writer) formatFont() string {
-	return fmt.Sprintf("%d", FONT+w.Font)
+func (w *Writer) AddRestAttr(s console_t) {
+	w.ResetAttrs = append(w.ResetAttrs, s)
 }
 
-func (w *Writer) formatBackground() string {
-	return fmt.Sprintf("%d", BACKGROUND+w.Background)
+func (w *Writer) ClearAttrs() {
+	w.Attrs = w.Attrs[0:0]
+	w.ResetAttrs = w.ResetAttrs[0:0]
+}
+
+func (w *Writer) formatFore() string {
+	return fmt.Sprintf("%d", FORE+w.Fore)
+}
+
+func (w *Writer) formatBack() string {
+	return fmt.Sprintf("%d", BACK+w.Back)
 }
 
 func (w *Writer) formatAttrs() string {
@@ -101,7 +118,7 @@ func (w *Writer) formatAttrs() string {
 }
 
 func (w *Writer) left() string {
-	left := prefix + w.formatFont() + ";" + w.formatBackground() + ";" + w.formatAttrs()
+	left := prefix + w.formatFore() + ";" + w.formatBack() + ";" + w.formatAttrs()
 	left = strings.TrimRight(left, ";") + "m"
 	return left
 }
@@ -136,4 +153,8 @@ func (w *Writer) Write(msg []byte) (int, error) {
 		return n, errors.New("format error")
 	}
 	return n, nil
+}
+
+func (w *Writer) converToHtml(msg string) string {
+	return ""
 }

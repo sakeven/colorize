@@ -1,1 +1,1 @@
-[32;47;5mhello[0mescaped
+hello escaped
