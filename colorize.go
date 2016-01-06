@@ -111,10 +111,9 @@ func (w *Writer) formatBack() string {
 func (w *Writer) formatAttrs() string {
 	format := ""
 	for _, attr := range w.Attrs {
-		format += fmt.Sprintf("%d,", attr)
+		format += fmt.Sprintf("%d;", attr)
 	}
-
-	return strings.TrimRight(format, ",")
+	return strings.TrimRight(format, ";")
 }
 
 func (w *Writer) left() string {
